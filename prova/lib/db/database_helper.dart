@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,7 +14,6 @@ class DatabaseHelper {
   /// Inicializa (ou abre) o banco e imprime o caminho do arquivo .db
   /// Passe o seu RA como parâmetro para que o arquivo seja criado como `tarefas_<RA>.db`.
   static Future<Database> initDB(String ra) async {
-    // Se estivermos em desktop, inicializa o backend ffi para que
     // a API global `openDatabase` funcione corretamente.
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       sqfliteFfiInit();
@@ -76,7 +76,17 @@ class DatabaseHelper {
   /// Insere uma tarefa e retorna o id gerado.
   static Future<int> insertTask(Task task) async {
     if (_db == null) throw Exception('Database not initialized');
-    return await _db!.insert('tarefas', task.toMap());
+    final id = await _db!.insert('tarefas', task.toMap());
+    // Print JSON representation of the inserted task (includes generated id)
+    final map = task.toMap();
+    map['id'] = id;
+    try {
+      print('Task JSON: ${jsonEncode(map)}');
+    } catch (_) {
+      // fallback to simple toString if encoding fails
+      print('Task JSON (toString): $map');
+    }
+    return id;
   }
 
   /// Retorna todas as tarefas ordenadas por criadoEm desc.

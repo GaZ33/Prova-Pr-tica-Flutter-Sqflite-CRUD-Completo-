@@ -6,7 +6,8 @@ Aplicativo simples em Flutter que utiliza SQLite para gerenciar tarefas com oper
 
 Dados do aluno
 --------------
-
+Fernando Henrique Zatarin RA 202310097
+Gabriel Alexandre Pinto RA 202310157
 
 Campo personalizado que ele recebeu
 ---------------------------------
