@@ -31,9 +31,39 @@ class _TaskListState extends State<TaskList> {
     });
   }
 
-  Future<void> _deleteTask(int id) async {
-    await DatabaseHelper.deleteTask(id);
+  Future<void> _deleteTask(Task task) async {
+    // keep a copy for undo
+    final deleted = task;
+    if (deleted.id == null) return;
+    await DatabaseHelper.deleteTask(deleted.id!);
     await _loadTasks();
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Tarefa '${deleted.titulo}' excluída."),
+        action: SnackBarAction(
+          label: 'Desfazer',
+          onPressed: () async {
+            // reinsert the deleted task (without id so autoincrement)
+            final restored = Task(
+              titulo: deleted.titulo,
+              descricao: deleted.descricao,
+              prioridade: deleted.prioridade,
+              criadoEm: deleted.criadoEm,
+              campoExtra: deleted.campoExtra,
+              ra: deleted.ra,
+              tema: deleted.tema,
+              corPrimaria: deleted.corPrimaria,
+              corSecundaria: deleted.corSecundaria,
+            );
+            await DatabaseHelper.insertTask(restored);
+            await _loadTasks();
+          },
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   Color _priorityColor(int p) {
@@ -62,7 +92,34 @@ class _TaskListState extends State<TaskList> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Tarefas')),
+      appBar: AppBar(
+        title: const Text('Tarefas'),
+        actions: [
+          IconButton(
+            tooltip: 'Mostrar caminho do DB',
+            icon: const Icon(Icons.storage),
+            onPressed: () async {
+              final path = DatabaseHelper.getDbPath() ?? 'DB não inicializado';
+              final tasks = await DatabaseHelper.getTasks();
+              await showDialog<void>(
+                context: context,
+                builder: (c) => AlertDialog(
+                  title: const Text('Informações do DB'),
+                  content: SelectableText(
+                    'Path: $path\nRegistros: ${tasks.length}',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(c),
+                      child: const Text('Fechar'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _tasks.isEmpty
@@ -103,7 +160,7 @@ class _TaskListState extends State<TaskList> {
                       return res == true;
                     },
                     onDismissed: (_) async {
-                      if (t.id != null) await _deleteTask(t.id!);
+                      await _deleteTask(t);
                     },
                     child: ListTile(
                       leading: CircleAvatar(
@@ -141,17 +198,47 @@ class _TaskListState extends State<TaskList> {
                           ),
                         ],
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () async {
-                          final changed = await Navigator.push<bool?>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => TaskForm(task: t),
-                            ),
-                          );
-                          if (changed == true) await _loadTasks();
-                        },
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: () async {
+                              final changed = await Navigator.push<bool?>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => TaskForm(task: t),
+                                ),
+                              );
+                              if (changed == true) await _loadTasks();
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete),
+                            onPressed: () async {
+                              final ok = await showDialog<bool>(
+                                context: context,
+                                builder: (c) => AlertDialog(
+                                  title: const Text('Confirmar'),
+                                  content: const Text(
+                                    'Deseja excluir esta tarefa?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(c, false),
+                                      child: const Text('Cancelar'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(c, true),
+                                      child: const Text('Excluir'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (ok == true) await _deleteTask(t);
+                            },
+                          ),
+                        ],
                       ),
                     ),
                   );

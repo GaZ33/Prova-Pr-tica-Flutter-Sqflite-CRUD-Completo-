@@ -80,6 +80,36 @@ class _TaskFormState extends State<TaskForm> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.task == null ? 'Nova Tarefa' : 'Editar Tarefa'),
+        actions: [
+          if (widget.task != null)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () async {
+                final ok = await showDialog<bool>(
+                  context: context,
+                  builder: (c) => AlertDialog(
+                    title: const Text('Confirmar'),
+                    content: const Text('Deseja excluir esta tarefa?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(c, false),
+                        child: const Text('Cancelar'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(c, true),
+                        child: const Text('Excluir'),
+                      ),
+                    ],
+                  ),
+                );
+                if (ok == true) {
+                  if (widget.task!.id != null)
+                    await DatabaseHelper.deleteTask(widget.task!.id!);
+                  Navigator.pop(context, true);
+                }
+              },
+            ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

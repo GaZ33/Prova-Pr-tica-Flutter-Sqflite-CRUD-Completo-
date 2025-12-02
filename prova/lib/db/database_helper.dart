@@ -7,6 +7,7 @@ import '../models/task.dart';
 
 class DatabaseHelper {
   static Database? _db;
+  static String? _dbPath;
   static String _appRa = '';
 
   /// Inicializa (ou abre) o banco e imprime o caminho do arquivo .db
@@ -22,6 +23,7 @@ class DatabaseHelper {
     _appRa = ra;
     final dbName = 'tarefas_${ra.isNotEmpty ? ra : 'RA'}.db';
     final path = join(documentsDir.path, dbName);
+    _dbPath = path;
 
     // Imprime o caminho do DB para facilitar abertura no DB Browser
     print('DB path: $path');
@@ -67,6 +69,9 @@ class DatabaseHelper {
 
     return _db!;
   }
+
+  /// Retorna o caminho do arquivo .db atualmente aberto (ou null se não inicializado)
+  static String? getDbPath() => _dbPath;
 
   /// Insere uma tarefa e retorna o id gerado.
   static Future<int> insertTask(Task task) async {
